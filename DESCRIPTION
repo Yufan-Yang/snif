@@ -1,0 +1,13 @@
+Package: SNIF
+Title: Selection of Nonlinear Interactions By A Forward Stepwise Algorithm
+Version: 0.0.0.9000
+Authors@R:
+    person(given = "Alexander",
+           family = "Rix",
+           role = c("aut", "cre"),
+           email = "alexrix@umich.edu")
+Description: What the package does (one paragraph).
+License: GPL-3
+Depends: splines, rlang, purrr
+Encoding: UTF-8
+LazyData: true
