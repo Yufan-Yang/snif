@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\*.Rcheck
+^SNIF_*
+^snif_*
+cran-comments.md
+^CRAN-RELEASE$
