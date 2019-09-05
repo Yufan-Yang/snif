@@ -20,8 +20,6 @@ test_that("make_interaction orders interactions correctly", {
 
 })
 
-
-
 test_that("parse_formula initialises initial selected sets correctly", {
   parse_formula <- SNIF:::parse_formula
 
@@ -72,5 +70,15 @@ test_that("parse_formula initialises initial selected sets correctly", {
           expr(bs(V2, degree = 3)[,-1]:V1), expr(bs(V1, degree = 3)[,-1]:V2)),
         out$int)
     )
+
+})
+
+test_that("parse_formula catches parsing errors", {
+    parse_formula <- SNIF:::parse_formula
+    expect_error(parse_formula(y ~ log(V2), 3))
+    expect_error(parse_formula(y ~ s(V2)[,-1], 3))
+    expect_error(parse_formula(y ~ splines::bs(V2)[,-1], 3))
+    expect_error(parse_formula(y ~ bs(V2)[, -(1:2)], 3))
+    expect_error(parse_formula(y ~ V1:splines::bs(V2)[,-1], 3))
 
 })
