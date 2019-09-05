@@ -8,9 +8,10 @@ Authors@R:
            email = "alexrix@umich.edu")
 Description: What the package does (one paragraph).
 License: GPL-3
-Imports: splines, rlang, purrr
+Depends: splines
+Imports: rlang, purrr
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
-Suggests: 
+Suggests:
     testthat

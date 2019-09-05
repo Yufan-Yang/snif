@@ -4,7 +4,7 @@
 \alias{snif}
 \title{Selection of nonlinear interactions by a forward stepwise algorithm}
 \usage{
-snif(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
+snif(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
   main.only = NULL, linear.only = NULL)
 }
 \arguments{
@@ -21,7 +21,7 @@ are "BIC" (default), "AIC", and "PV" (p.value)}
 
 \item{degree}{Degree of basis spline expansion for nonlinear effects}
 
-\item{maxit}{Number of iterations to run. Default is \code{ncol(df)}}
+\item{maxnv}{Max number of varaiables to add. Default is \code{ncol(df)}}
 
 \item{main.only}{Character vector of variables that are only considered for
 main effects}

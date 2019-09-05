@@ -1,98 +1,3 @@
-
-make_interaction <- function(x, y)
-{
-  if (order(purrr::map_chr(c(x, y), expr_text))[1] == 1)
-    expr(!!x:!!y)
-  else
-    expr(!!y:!!x)
-}
-
-
-# This parses the input formula of SNIF to extract what the linear, nonlinear
-# and interaction effects are. This code is simultaneously horrible and
-# complicated.
-parse_formula <- function(f, degree)
-{
-    # in the function 'bs', "x" is the variable that gets expanded, and we must
-    # extract it so we can properly account for it in SNIF.
-    get_x <- function(e)
-    {
-       i <- 1 + match(rlang::fn_fmls_names(bs)[1], rlang::call_args_names(e))
-       ifelse(is.na(i), e[[2]], e[[i]])
-    }
-
-    # sort of a recursive top down parser. processing interaction terms is ugly
-    parse.rec <- function(list, e)
-    {
-        if (length(e) == 0) {
-          # NULL formula
-        }
-        # If the length of the expression is 1, it is a (linear) variable
-        else if (length(e) == 1)
-          list$lin <- c(list$lin, e)
-
-        else if (e[[1]] == expr(`+`))
-          list <- parse.rec(parse.rec(list, e[[2]]), e[[3]])
-
-        else if (e[[1]] == expr(`:`)) {
-          l0 <- parse.rec(list(lin = c(), nl = c(), int = c()), e[[2]])
-          l  <- parse.rec(l0, e[[3]])
-
-          n.lin <- length(l$lin)
-          n.nl  <- length(l$nl)
-          if (n.lin == 2)
-            list$int <- c(list$int, make_interaction(l$lin[[1]], l$lin[[2]]))
-
-          if (n.nl == 2)
-            list$int <- c(list$int, make_interaction(l$nl[[1]], l$nl[[2]]))
-
-          if (n.lin == 2 && n.nl == 2) {
-            list$int <- c(list$int, make_interaction(l$lin[[1]], l$nl[[2]]),
-              make_interaction(l$lin[[2]], l$nl[[1]]))
-          }
-          if (n.lin == 2 && n.nl == 1) {
-            if (is.null(l0$nl))
-              list$int <- c(list$int, make_interaction(l$nl[[1]], l$lin[[1]]))
-            else
-              list$int <- c(list$int, make_interaction(l$nl[[1]], l$lin[[2]]))
-          }
-          if (n.lin == 1 && n.nl == 2) {
-            if (is.null(l0$lin))
-              list$int <- c(list$int, make_interaction(l$nl[[1]], l$lin[[1]]))
-            else
-              list$int <- c(list$int, make_interaction(l$nl[[2]], l$lin[[1]]))
-          }
-          if (n.lin == 1 && n.nl == 1)
-            list$int <- c(list$int, make_interaction(l$lin[[1]], l$nl[[1]]))
-        }
-
-        else if (e[[1]] == expr(`[`)) {
-          if (e[[2]][[1]] != expr(bs))
-            stop(paste("Parsing failure: Unsupported term", expr_text(e),
-              "in formula."))
-
-          if (length(e) < 4 || e[[4]] != -1)
-            stop(paste("Parsing failure: Unsupported subset of basis spline",
-              expr_text(e), "in formula. Only [,-1] is allowed."))
-
-          list$nl <- c(list$nl, expr(bs(!!sym(get_x(e[[2]])),
-            degree = !!degree)[, -1]))
-        }
-
-        else if (e[[1]] == expr(bs)) {
-            list$lin <- c(list$lin, get_x(e))
-            list$nl  <- c(list$nl, expr(bs(!!sym(get_x(e)),
-              degree = !!degree)[, -1]))
-        }
-
-        else
-          stop(paste("Parsing failure: Unrecognized term ", expr_text(e),
-            "in formula."))
-
-      list
-    }
-    parse.rec(list(lin = c(), nl = c(), int = c()), f_rhs(f))
-}
 #' Selection of nonlinear interactions by a forward stepwise algorithm
 #'
 #' \code{snif} is a greedy forward stepwise selection algorithm that takes
@@ -109,7 +14,7 @@ parse_formula <- function(f, degree)
 #'   used to determine which variable to add to the model. supported options
 #'   are "BIC" (default), "AIC", and "PV" (p.value)
 #' @param degree Degree of basis spline expansion for nonlinear effects
-#' @param maxit Number of iterations to run. Default is \code{ncol(df)}
+#' @param maxnv Max number of varaiables to add. Default is \code{ncol(df)}
 #' @param main.only Character vector of variables that are only considered for
 #'   main effects
 #' @param linear.only Character vector of variables that are only considered to
@@ -124,7 +29,7 @@ parse_formula <- function(f, degree)
 #' @importFrom splines bs
 #' @importFrom rlang f_lhs f_rhs expr sym expr_text
 #' @export
-snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
+snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
                      main.only = NULL, linear.only = NULL)
 {
   if (!rlang::is_formula(formula))
@@ -138,14 +43,22 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
   if (!is.numeric(degree) || degree < 2)
     stop("'degree' must be an integer >= 2.")
 
-  if (!is.integer(maxit) || maxit < 1)
-    stop("'maxit' must be an integer > 0.")
+  if (!is.integer(maxnv) || maxnv < 1)
+    stop("'maxnv' must be an integer > 0.")
 
   if (!is.null(main.only) && !is.character(main.only))
     stop("'main.only' must be a character vector.")
 
   if (!is.null(linear.only) && !is.character(linear.only))
     stop("'linear.only' must be a character vector.")
+
+
+  if (!is.null(setdiff(main.only, names(df))))
+    stop("main.only contains variables that are not in df")
+
+    if (!is.null(setdiff(linear.only, names(df))))
+      stop("main.only contains variables that are not in df")
+
 
   score.model <- switch(score,
     "BIC" = function(x) stats::BIC(x),
@@ -179,7 +92,7 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
   nl.cand <- setdiff(purrr::map(vars, function(var)
     expr(bs(!!sym(var), degree = !!degree)[, -1])), nl.sel)
 
-  add.int <- function(int.cand, sel, term)
+  add.inter <- function(int.cand, sel, term)
   {
     int <- make_interaction(sel, term)
 
@@ -194,13 +107,15 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
   }
 
   int.cand <- purrr::map(c(lin.sel, nl.sel), function(term)
-    purrr::reduce(c(lin.sel, nl.sel), add.int, term = term, .init = NULL)
+    purrr::reduce(c(lin.sel, nl.sel), add.inter, term = term, .init = NULL)
   )
   int.cand <- unique(rlang::squash(int.cand))
 
   f <- formula
-  output <- list(formula = f, score = score.model(stats::lm(f, df)), it = 0)
-  for (it in 1:maxit) {
+  output <- structure(list(formula = f, score = score.model(stats::lm(f, df)),
+                        nv = 0, df = df), class = "snif")
+
+  for (nv in 1:maxnv) {
     lin.scores <- c(purrr::map_dbl(lin.cand, score.candidate), Inf)
     nl.scores  <- c(purrr::map_dbl(nl.cand, score.candidate), Inf)
     int.scores <- c(purrr::map_dbl(int.cand, score.candidate), Inf)
@@ -220,7 +135,7 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
       lin.sel  <- c(term, lin.sel)
       lin.cand <- lin.cand[-i]
 
-      int.cand <- purrr::reduce(sel, add.int, term = term, .init = int.cand)
+      int.cand <- purrr::reduce(sel, add.inter, term = term, .init = int.cand)
     }
     else if (i == 2) {
       i <- which.min(nl.scores)
@@ -229,7 +144,7 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
       nl.sel  <- c(term, nl.sel)
       nl.cand <- nl.cand[-i]
 
-      int.cand <- purrr::reduce(sel, add.int, term = term, .init = int.cand)
+      int.cand <- purrr::reduce(sel, add.inter, term = term, .init = int.cand)
     }
     else {
       i <- which.min(int.scores)
@@ -245,9 +160,50 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxit = ncol(df),
       f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!term)
 
     output$score   <- c(output$score, s)
-    output$it      <- c(output$it, it)
+    output$nv      <- c(output$nv, nv)
     output$formula <- c(output$formula, f)
   }
 
-    return(output)
+  return(output)
+}
+
+#'Summarizing SNIF Fits
+#'
+#' ‘summary’ method for class ‘"snif"’
+#'
+#' \code{summary.snif} extracts the best scoring model from \code{object} and
+#' returns the linear model summary.
+#' @param object An object of type "snif"
+#' @param ... Additional arguments to \code{summary.lm}
+#' @export
+summary.snif <- function(object, ...)
+{
+    if (class(object) != "snif")
+      stop("'object' is not a 'snif' object.")
+
+   i <- which.min(object$score)
+   formula <- object$formula[[i]]
+   df <- object$df
+   eval(expr(summary(lm(!!formula, df), ...)))
+}
+
+
+#'Predict Using The Best SNIF Fit
+#'
+#' ‘predict method for class ‘"snif"’
+#'
+#' \code{predict.snif} extracts the best scoring model from \code{object} and
+#' returns the predictions from \code{predict.lm}.
+#' @param object An object of type "snif"
+#' @param ... Additional arguments to \code{predict.lm}
+#' @export
+predict.snif <- function(object, newdata, ...)
+{
+    if (class(object) != "snif")
+      stop("'object' is not a 'snif' object.")
+
+   i <- which.min(object$score)
+   formula <- object$formula[[i]]
+   df <- object$df
+   eval(expr(predict(lm(!!formula, df), newdata, ...)))
 }
