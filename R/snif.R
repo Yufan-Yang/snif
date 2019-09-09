@@ -10,9 +10,12 @@
 #'   \code{bs}, and interaction terms via \code{:}. It is highly recomended to
 #'   read the documentation before trying anything fancy with \code{formula}
 #' @param df A data.frame containing the data
+#' @param type The type of regression to perform. Either "linear" (default) or
+#'   "logistic".
 #' @param score A character argument that specifies the kind of scoring method
 #'   used to determine which variable to add to the model. supported options
-#'   are "BIC" (default), "AIC", and "PV" (p.value)
+#'   are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
+#'   the type is "binary".
 #' @param degree Degree of basis spline expansion for nonlinear effects
 #' @param maxnv Max number of varaiables to add. Default is \code{ncol(df)}
 #' @param main.only Character vector of variables that are only considered for
@@ -29,8 +32,8 @@
 #' @importFrom splines bs
 #' @importFrom rlang f_lhs f_rhs expr sym expr_text
 #' @export
-snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
-                     main.only = NULL, linear.only = NULL)
+snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
+                   maxnv = ncol(df), main.only = NULL, linear.only = NULL)
 {
   if (!rlang::is_formula(formula))
     stop("'formula' must be a formula.")
@@ -39,6 +42,8 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
     stop("'df' must be a data.frame.")
 
   score <- match.arg(score, c("BIC", "AIC", "PV"))
+
+  type <- match.arg(type, c("linear", "logistic"))
 
   if (!is.numeric(degree) || degree < 2)
     stop("'degree' must be an integer >= 2.")
@@ -52,13 +57,20 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
   if (!is.null(linear.only) && !is.character(linear.only))
     stop("'linear.only' must be a character vector.")
 
-
   if (!is.null(setdiff(main.only, names(df))))
     stop("main.only contains variables that are not in df")
 
-    if (!is.null(setdiff(linear.only, names(df))))
-      stop("main.only contains variables that are not in df")
+  if (!is.null(setdiff(linear.only, names(df))))
+    stop("main.only contains variables that are not in df")
 
+  y <- deparse(f_lhs(formula))
+  if (type == "logistic" && length(unique(df[[y]])) != 2)
+    stop(paste(y, "is not a binary variable."))
+
+  if (type == "logistic")
+    model <- function(f, df) stats::glm(f, df, family = stats::binomial)
+  else
+    model <- stats::lm
 
   score.model <- switch(score,
     "BIC" = function(x) stats::BIC(x),
@@ -73,10 +85,13 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
     }
   )
 
+  if (type == "logistic" && score == "PV")
+    stop("PV scoring is incompatible with logisitic regression.")
+
   score.candidate <- function(candidate)
   {
     f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!candidate)
-    score.model(stats::lm(f, df))
+    score.model(model(f, df))
   }
 
   parsed   <- parse_formula(formula, degree)
@@ -85,7 +100,7 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
   nl.sel  <- parsed$nl
   int.sel <- parsed$int
 
-  vars     <- setdiff(names(df), deparse(f_lhs(formula)))
+  vars     <- setdiff(names(df), y)
   lin.cand <- setdiff(purrr::map(vars, ~ sym(.x)), lin.sel)
 
   vars    <- setdiff(vars, linear.only)
@@ -112,8 +127,8 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
   int.cand <- unique(rlang::squash(int.cand))
 
   f <- formula
-  output <- structure(list(formula = f, score = score.model(stats::lm(f, df)),
-                        nv = 0, df = df), class = "snif")
+  output <- structure(list(formula = f, score = score.model(model(f, df)),
+                        nv = 0, df = df, model = model), class = "snif")
 
   for (nv in 1:maxnv) {
     lin.scores <- c(purrr::map_dbl(lin.cand, score.candidate), Inf)
@@ -122,7 +137,7 @@ snif <- function(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
 
     s <- min(c(min(lin.scores), min(nl.scores), min(int.scores)))
     if (s == Inf) {
-      message("No more valid candidates, returning.")
+      message("No more candidate additions, returning.")
       break
     }
 
@@ -184,9 +199,8 @@ summary.snif <- function(object, ...)
    i <- which.min(object$score)
    formula <- object$formula[[i]]
    df <- object$df
-   eval(expr(summary(lm(!!formula, df), ...)))
+   eval(expr(summary(stats::lm(!!formula, df), ...)))
 }
-
 
 #'Predict Using The Best SNIF Fit
 #'
@@ -195,6 +209,8 @@ summary.snif <- function(object, ...)
 #' \code{predict.snif} extracts the best scoring model from \code{object} and
 #' returns the predictions from \code{predict.lm}.
 #' @param object An object of type "snif"
+#' @param newdata An optional data frame in which to look for variables with
+#'   which to predict.  If omitted, the fitted values are used.
 #' @param ... Additional arguments to \code{predict.lm}
 #' @export
 predict.snif <- function(object, newdata, ...)
@@ -205,5 +221,5 @@ predict.snif <- function(object, newdata, ...)
    i <- which.min(object$score)
    formula <- object$formula[[i]]
    df <- object$df
-   eval(expr(predict(lm(!!formula, df), newdata, ...)))
+   eval(expr(stats::predict(stats::lm(!!formula, df), newdata, ...)))
 }

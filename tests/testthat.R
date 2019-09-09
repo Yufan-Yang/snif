@@ -1,4 +1,4 @@
 library(testthat)
-library(SNIF)
+library(snif)
 
-test_check("SNIF")
+test_check("snif")

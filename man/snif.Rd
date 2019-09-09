@@ -4,8 +4,8 @@
 \alias{snif}
 \title{Selection of nonlinear interactions by a forward stepwise algorithm}
 \usage{
-snif(formula, df, score = "BIC", degree = 3, maxnv = ncol(df),
-  main.only = NULL, linear.only = NULL)
+snif(formula, df, type = "linear", score = "BIC", degree = 3,
+  maxnv = ncol(df), main.only = NULL, linear.only = NULL)
 }
 \arguments{
 \item{formula}{An initial formula for \code{snif} to start with.
@@ -15,9 +15,13 @@ read the documentation before trying anything fancy with \code{formula}}
 
 \item{df}{A data.frame containing the data}
 
+\item{type}{The type of regression to perform. Either "linear" (default) or
+"logistic".}
+
 \item{score}{A character argument that specifies the kind of scoring method
 used to determine which variable to add to the model. supported options
-are "BIC" (default), "AIC", and "PV" (p.value)}
+are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
+the type is "binary".}
 
 \item{degree}{Degree of basis spline expansion for nonlinear effects}
 

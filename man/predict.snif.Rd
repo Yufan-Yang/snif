@@ -9,6 +9,9 @@
 \arguments{
 \item{object}{An object of type "snif"}
 
+\item{newdata}{An optional data frame in which to look for variables with
+which to predict.  If omitted, the fitted values are used.}
+
 \item{...}{Additional arguments to \code{predict.lm}}
 }
 \description{
