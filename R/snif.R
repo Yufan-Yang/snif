@@ -3,24 +3,42 @@
 #' \code{snif} is a greedy forward stepwise selection algorithm that takes
 #' nonlinear effects and interactions into account when adding variables.
 #' \code{snif} follows the strong hereditary principle (for X1:X2 to be
-#' included as an interaction, both X1 and X2 both must have had main effects
-#' selected).
+#' included as an interaction, both X1 and X2 both must be already included in
+#' the model. \code{snif} supports both binary and continuous outcomes.
+#'
+#' \code{snif} uses a formula to initialize the model before the forward
+#' stepwise stage of the algorithm. If you are not interested in using a
+#' non-null initial model, something to the effect of \code{y ~ NULL} should do
+#' just fine. On the other hand, if you do wish to use an initial model, some
+#' care must be taken so \code{snif} will be happy.
+#'
+#' Basically, there are four valid ways to build snif formulas:
+#' \enumerate{
+#'     \item Add a linear main effect, as in \code{y ~ V2}
+#'     \item Add a nonlinear main effect, as in \code{y ~ bs(V2)[,-1]}. Note
+#'         that \code{[, -1]} is important.
+#'   \item Add a linear and nonlinear main effect, as in \code{y ~ bs(V2)}.
+#'       \code{snif} will automatically split a \code{bs} expansion without an
+#'       index (\code{[ ,-1]}) into linear and nonlinear parts internally
+#'     your outcome of interest.
+#'}
 #' @param formula An initial formula for \code{snif} to start with.
 #'   \code{formula} supports linear variables, basis spline expansions via
 #'   \code{bs}, and interaction terms via \code{:}. It is highly recomended to
-#'   read the documentation before trying anything fancy with \code{formula}
+#'   read the details section of the documentation before trying anything fancy
+#'   with \code{formula}
 #' @param df A data.frame containing the data
 #' @param type The type of regression to perform. Either "linear" (default) or
 #'   "logistic".
 #' @param score A character argument that specifies the kind of scoring method
 #'   used to determine which variable to add to the model. supported options
 #'   are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
-#'   the type is "binary".
+#'   the 'type' is "logisitic".
 #' @param degree Degree of basis spline expansion for nonlinear effects
 #' @param maxnv Max number of varaiables to add. Default is \code{ncol(df)}
 #' @param main.only Character vector of variables that are only considered for
 #'   main effects
-#' @param linear.only Character vector of variables that are only considered to
+#' @param linear.only Character vector of variables that are considered to
 #'   have only linear effects
 #' @references
 #'  Narisetty, Naveen N. and Mukherjee, Bhramar and Chen, Yin-Hsiu and Gonzalez,
@@ -48,7 +66,7 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
   if (!is.numeric(degree) || degree < 2)
     stop("'degree' must be an integer >= 2.")
 
-  if (!is.integer(maxnv) || maxnv < 1)
+  if (!is.numeric(maxnv) || maxnv < 1)
     stop("'maxnv' must be an integer > 0.")
 
   if (!is.null(main.only) && !is.character(main.only))
@@ -111,7 +129,7 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
   {
     int <- make_interaction(sel, term)
 
-    if (sel == term)
+    if (all.vars(sel) == all.vars(term))
       int.cand
     else if (all.vars(sel) %in% main.only || all.vars(term) %in% main.only)
       int.cand
@@ -128,7 +146,8 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
 
   f <- formula
   output <- structure(list(formula = f, score = score.model(model(f, df)),
-                        nv = 0, df = df, model = model), class = "snif")
+                        nv = 0, df = df, model = expr(!!model)),
+                      class = "snif")
 
   for (nv in 1:maxnv) {
     lin.scores <- c(purrr::map_dbl(lin.cand, score.candidate), Inf)
@@ -202,9 +221,9 @@ summary.snif <- function(object, ...)
    eval(expr(summary(stats::lm(!!formula, df), ...)))
 }
 
-#'Predict Using The Best SNIF Fit
+#' Predict Using The Best SNIF Fit
 #'
-#' ‘predict method for class ‘"snif"’
+#' predict method for class ‘"snif"’
 #'
 #' \code{predict.snif} extracts the best scoring model from \code{object} and
 #' returns the predictions from \code{predict.lm}.
