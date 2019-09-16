@@ -11,7 +11,8 @@ snif(formula, df, type = "linear", score = "BIC", degree = 3,
 \item{formula}{An initial formula for \code{snif} to start with.
 \code{formula} supports linear variables, basis spline expansions via
 \code{bs}, and interaction terms via \code{:}. It is highly recomended to
-read the documentation before trying anything fancy with \code{formula}}
+read the details section of the documentation before trying anything fancy
+with \code{formula}}
 
 \item{df}{A data.frame containing the data}
 
@@ -21,7 +22,7 @@ read the documentation before trying anything fancy with \code{formula}}
 \item{score}{A character argument that specifies the kind of scoring method
 used to determine which variable to add to the model. supported options
 are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
-the type is "binary".}
+the 'type' is "logisitic".}
 
 \item{degree}{Degree of basis spline expansion for nonlinear effects}
 
@@ -30,15 +31,38 @@ the type is "binary".}
 \item{main.only}{Character vector of variables that are only considered for
 main effects}
 
-\item{linear.only}{Character vector of variables that are only considered to
+\item{linear.only}{Character vector of variables that are considered to
 have only linear effects}
 }
 \description{
 \code{snif} is a greedy forward stepwise selection algorithm that takes
 nonlinear effects and interactions into account when adding variables.
 \code{snif} follows the strong hereditary principle (for X1:X2 to be
-included as an interaction, both X1 and X2 both must have had main effects
-selected).
+included as an interaction, both X1 and X2 both must be already included in
+the model. \code{snif} supports both binary and continuous outcomes.
+}
+\details{
+\code{snif} uses a formula to initialize the model before the forward
+stepwise stage of the algorithm. If you are not interested in using a
+non-null initial model, something to the effect of \code{y ~ NULL} should do
+just fine. On the other hand, if you do wish to use an initial model, some
+care must be taken so \code{snif} will be happy.
+
+Basically, there are four valid ways to build snif formulas:
+\enumerate{
+    \item Add a linear main effect, as in \code{y ~ V2}
+    \item Add a nonlinear main effect, as in \code{y ~ bs(V2)[,-1]}. Note
+        that \code{[, -1]} is important.
+  \item Add a linear and nonlinear main effect, as in \code{y ~ bs(V2)}.
+      \code{snif} will automatically split a \code{bs} expansion without an
+      index (\code{[ ,-1]}) into linear and nonlinear parts internally.
+  \item Add an interaction term, as in \code{y + V2:V3} You may specify
+      interactions between in any combination of 1-3. If you chose to include
+      an interaction of type 3, note that \code{snif} will internally
+      decompose the interaction into parts. For example \code{y ~ bs(V2):V3}
+      is equivalent to \code{y ~ V2:V3 + bs(V2)[,-1]:V3}
+}
+\code{snif} formulas can be built out of any linear combination 1-4.
 }
 \references{
 Narisetty, Naveen N. and Mukherjee, Bhramar and Chen, Yin-Hsiu and Gonzalez,

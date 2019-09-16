@@ -15,7 +15,7 @@ which to predict.  If omitted, the fitted values are used.}
 \item{...}{Additional arguments to \code{predict.lm}}
 }
 \description{
-‘predict method for class ‘"snif"’
+predict method for class ‘"snif"’
 }
 \details{
 \code{predict.snif} extracts the best scoring model from \code{object} and

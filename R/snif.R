@@ -19,9 +19,14 @@
 #'         that \code{[, -1]} is important.
 #'   \item Add a linear and nonlinear main effect, as in \code{y ~ bs(V2)}.
 #'       \code{snif} will automatically split a \code{bs} expansion without an
-#'       index (\code{[ ,-1]}) into linear and nonlinear parts internally
-#'     your outcome of interest.
+#'       index (\code{[ ,-1]}) into linear and nonlinear parts internally.
+#'   \item Add an interaction term, as in \code{y + V2:V3} You may specify
+#'       interactions between in any combination of 1-3. If you chose to include
+#'       an interaction of type 3, note that \code{snif} will internally
+#'       decompose the interaction into parts. For example \code{y ~ bs(V2):V3}
+#'       is equivalent to \code{y ~ V2:V3 + bs(V2)[,-1]:V3}
 #'}
+#' \code{snif} formulas can be built out of any linear combination 1-4.
 #' @param formula An initial formula for \code{snif} to start with.
 #'   \code{formula} supports linear variables, basis spline expansions via
 #'   \code{bs}, and interaction terms via \code{:}. It is highly recomended to
