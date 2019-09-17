@@ -8,9 +8,9 @@
 #'
 #' \code{snif} uses a formula to initialize the model before the forward
 #' stepwise stage of the algorithm. If you are not interested in using a
-#' non-null initial model, something to the effect of \code{y ~ NULL} should do
-#' just fine. On the other hand, if you do wish to use an initial model, some
-#' care must be taken so \code{snif} will be happy.
+#' non-null initial model, \code{y ~ NULL} should do just fine. On the other
+#' hand, if you do wish to use an initial model, some care must be taken so
+#' \code{snif} will be happy.
 #'
 #' Basically, there are four valid ways to build snif formulas:
 #' \enumerate{
@@ -29,18 +29,18 @@
 #' \code{snif} formulas can be built out of any linear combination 1-4.
 #' @param formula An initial formula for \code{snif} to start with.
 #'   \code{formula} supports linear variables, basis spline expansions via
-#'   \code{bs}, and interaction terms via \code{:}. It is highly recomended to
+#'   \code{bs}, and interaction terms via \code{:}. It is highly recommended to
 #'   read the details section of the documentation before trying anything fancy
 #'   with \code{formula}
 #' @param df A data.frame containing the data
 #' @param type The type of regression to perform. Either "linear" (default) or
-#'   "logistic".
+#'   "logistic"
 #' @param score A character argument that specifies the kind of scoring method
 #'   used to determine which variable to add to the model. supported options
 #'   are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
-#'   the 'type' is "logisitic".
+#'   the 'type' is "logistic"
 #' @param degree Degree of basis spline expansion for nonlinear effects
-#' @param maxnv Max number of varaiables to add. Default is \code{ncol(df)}
+#' @param maxnv Max number of variables to add. Default is \code{ncol(df)}
 #' @param main.only Character vector of variables that are only considered for
 #'   main effects
 #' @param linear.only Character vector of variables that are considered to
@@ -151,7 +151,7 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
 
   f <- formula
   output <- structure(list(formula = f, score = score.model(model(f, df)),
-                        nv = 0, df = df, model = expr(!!model)),
+                        nv = 0, df = df, model = model),
                       class = "snif")
 
   for (nv in 1:maxnv) {
@@ -208,12 +208,13 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
 
 #'Summarizing SNIF Fits
 #'
-#' ‘summary’ method for class ‘"snif"’
+#' \code{summary} method for class "snif"
 #'
 #' \code{summary.snif} extracts the best scoring model from \code{object} and
 #' returns the linear model summary.
 #' @param object An object of type "snif"
-#' @param ... Additional arguments to \code{summary.lm}
+#' @param ... Additional arguments to \code{summary.lm} or \code{summary.glm},
+#'     depending on the type of model fit
 #' @export
 summary.snif <- function(object, ...)
 {
@@ -223,19 +224,20 @@ summary.snif <- function(object, ...)
    i <- which.min(object$score)
    formula <- object$formula[[i]]
    df <- object$df
-   eval(expr(summary(stats::lm(!!formula, df), ...)))
+   eval(expr(summary(object$model(!!formula, df), ...)))
 }
 
 #' Predict Using The Best SNIF Fit
 #'
-#' predict method for class ‘"snif"’
+#' \code{predict} method for class "snif"
 #'
 #' \code{predict.snif} extracts the best scoring model from \code{object} and
 #' returns the predictions from \code{predict.lm}.
 #' @param object An object of type "snif"
 #' @param newdata An optional data frame in which to look for variables with
-#'   which to predict.  If omitted, the fitted values are used.
-#' @param ... Additional arguments to \code{predict.lm}
+#'   which to predict.  If omitted, the original values are used.
+#' @param ... Additional arguments to \code{predict.lm} or \code{predict.glm},
+#' depending on the type of model fit
 #' @export
 predict.snif <- function(object, newdata, ...)
 {
@@ -245,5 +247,5 @@ predict.snif <- function(object, newdata, ...)
    i <- which.min(object$score)
    formula <- object$formula[[i]]
    df <- object$df
-   eval(expr(stats::predict(stats::lm(!!formula, df), newdata, ...)))
+   eval(expr(stats::predict(object$model(!!formula, df), newdata, ...)))
 }

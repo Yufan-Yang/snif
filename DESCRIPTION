@@ -19,6 +19,7 @@ Description: Variable selection methods specifically targeted toward
     linear terms so that the basis functions for a predictor are used only when
     the linear term is not sufficient to explain its effect on the outcome.
 License: GPL-3
+Language: en-us
 Depends: splines
 Imports: purrr, rlang
 Encoding: UTF-8

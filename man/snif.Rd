@@ -10,23 +10,23 @@ snif(formula, df, type = "linear", score = "BIC", degree = 3,
 \arguments{
 \item{formula}{An initial formula for \code{snif} to start with.
 \code{formula} supports linear variables, basis spline expansions via
-\code{bs}, and interaction terms via \code{:}. It is highly recomended to
+\code{bs}, and interaction terms via \code{:}. It is highly recommended to
 read the details section of the documentation before trying anything fancy
 with \code{formula}}
 
 \item{df}{A data.frame containing the data}
 
 \item{type}{The type of regression to perform. Either "linear" (default) or
-"logistic".}
+"logistic"}
 
 \item{score}{A character argument that specifies the kind of scoring method
 used to determine which variable to add to the model. supported options
 are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
-the 'type' is "logisitic".}
+the 'type' is "logistic"}
 
 \item{degree}{Degree of basis spline expansion for nonlinear effects}
 
-\item{maxnv}{Max number of varaiables to add. Default is \code{ncol(df)}}
+\item{maxnv}{Max number of variables to add. Default is \code{ncol(df)}}
 
 \item{main.only}{Character vector of variables that are only considered for
 main effects}
@@ -44,9 +44,9 @@ the model. \code{snif} supports both binary and continuous outcomes.
 \details{
 \code{snif} uses a formula to initialize the model before the forward
 stepwise stage of the algorithm. If you are not interested in using a
-non-null initial model, something to the effect of \code{y ~ NULL} should do
-just fine. On the other hand, if you do wish to use an initial model, some
-care must be taken so \code{snif} will be happy.
+non-null initial model, \code{y ~ NULL} should do just fine. On the other
+hand, if you do wish to use an initial model, some care must be taken so
+\code{snif} will be happy.
 
 Basically, there are four valid ways to build snif formulas:
 \enumerate{

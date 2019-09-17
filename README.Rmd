@@ -2,6 +2,10 @@
 output: md_document
 ---
 
+<!-- badges: start -->
+[![Travis build status](https://travis-ci.org/umich-cphds/snif.svg?branch=master)](https://travis-ci.org/umich-cphds/snif)
+<!-- badges: end -->
+
 # Introduction
 `snif` is a R package that implements "Selection of Nonlinear Interactions by a
 Forward Stepwise Algorithm". `snif` (the function) is a a forward stepwise
@@ -66,7 +70,7 @@ summary(snif.out)
 `snif` also supports interaction terms via `:` and basis expansions via `bs`.
 
 ```{r}
-snif.out <- snif(formula = y ~ bs(V2), df = snif.df, type = "linear",
+snif.out <- snif(formula = y ~ bs(V2) + V2:V4, df = snif.df, type = "linear",
                    score = "BIC")
 ```
 Note that `bs` implies that both `V2` and the nonlinear expansion of `V2`,

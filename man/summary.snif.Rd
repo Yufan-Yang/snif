@@ -9,10 +9,11 @@
 \arguments{
 \item{object}{An object of type "snif"}
 
-\item{...}{Additional arguments to \code{summary.lm}}
+\item{...}{Additional arguments to \code{summary.lm} or \code{summary.glm},
+depending on the type of model fit}
 }
 \description{
-‘summary’ method for class ‘"snif"’
+\code{summary} method for class "snif"
 }
 \details{
 \code{summary.snif} extracts the best scoring model from \code{object} and

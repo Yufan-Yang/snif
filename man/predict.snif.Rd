@@ -10,12 +10,13 @@
 \item{object}{An object of type "snif"}
 
 \item{newdata}{An optional data frame in which to look for variables with
-which to predict.  If omitted, the fitted values are used.}
+which to predict.  If omitted, the original values are used.}
 
-\item{...}{Additional arguments to \code{predict.lm}}
+\item{...}{Additional arguments to \code{predict.lm} or \code{predict.glm},
+depending on the type of model fit}
 }
 \description{
-predict method for class ‘"snif"’
+\code{predict} method for class "snif"
 }
 \details{
 \code{predict.snif} extracts the best scoring model from \code{object} and
