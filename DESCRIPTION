@@ -1,6 +1,6 @@
 Package: snif
 Title: Selection of Nonlinear Interactions by a Forward Stepwise Algorithm
-Version: 0.0.2.9000
+Version: 0.5.0
 Authors@R:
     person(given = "Alexander",
            family = "Rix",
