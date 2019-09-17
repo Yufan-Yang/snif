@@ -1,3 +1,5 @@
+# make_interaction provides a way to conistently order interaction terms,
+# which makes it easier to check selected interactions for
 make_interaction <- function(x, y)
 {
   if (order(purrr::map_chr(c(x, y), expr_text))[1] == 1)
@@ -5,7 +7,6 @@ make_interaction <- function(x, y)
   else
     expr(!!y:!!x)
 }
-
 
 # This parses the input formula of SNIF to extract what the linear, nonlinear
 # and interaction effects are. This code is simultaneously horrible and

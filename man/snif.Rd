@@ -64,6 +64,31 @@ Basically, there are four valid ways to build snif formulas:
 }
 \code{snif} formulas can be built out of any linear combination 1-4.
 }
+\examples{
+library(snif)
+
+# snif contains a synthetic data.frame, snif.df
+# if you not want to include any covariates in the initial model, you can
+# just use NULL of the right hand side of formula
+snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear",
+                     score = "BIC")
+
+# snif provides a summary method which will extract and summarise the best
+# scoring subset
+summary(snif.out)
+
+# you can specify an initial model by using the rules explained in the
+# details section.
+snif.out <- snif(formula = y ~ V2 + V2:V4, df = snif.df, type = "linear",
+                     score = "BIC")
+
+# snif also supports binary outcomes. First, we copy snif.df and discretize y
+snif.df.bin <- snif.df
+snif.df.bin$y <- ifelse(snif.df.bin$y > 5, 1, 0)
+snif.out <- snif(formula = y ~ NULL, df = snif.df.bin, type = "logistic",
+                     score = "BIC")
+summary(snif.out)
+}
 \references{
 Narisetty, Naveen N. and Mukherjee, Bhramar and Chen, Yin-Hsiu and Gonzalez,
  Richard and Meeker, John D. Selection of nonlinear interactions by a

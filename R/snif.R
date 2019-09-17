@@ -52,6 +52,31 @@
 #'  chemical mixtures affecting health outcomes. Statistics in Medicine.
 #'  2019;38(9):1582-1600. \href{https://doi.org/10.1002/sim.8059}{10.1002/sim.8059}
 #' @author Alexander Rix
+#' @examples
+#' library(snif)
+#'
+#' # snif contains a synthetic data.frame, snif.df
+#' # if you not want to include any covariates in the initial model, you can
+#' # just use NULL of the right hand side of formula
+#' snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear",
+#'                      score = "BIC")
+#'
+#' # snif provides a summary method which will extract and summarise the best
+#' # scoring subset
+#' summary(snif.out)
+#'
+#' # you can specify an initial model by using the rules explained in the
+#' # details section.
+#' snif.out <- snif(formula = y ~ V2 + V2:V4, df = snif.df, type = "linear",
+#'                      score = "BIC")
+#'
+#' # snif also supports binary outcomes. First, we copy snif.df and discretize y
+#' snif.df.bin <- snif.df
+#' snif.df.bin$y <- ifelse(snif.df.bin$y > 5, 1, 0)
+
+#' snif.out <- snif(formula = y ~ NULL, df = snif.df.bin, type = "logistic",
+#'                      score = "BIC")
+#' summary(snif.out)
 #' @importFrom splines bs
 #' @importFrom rlang f_lhs f_rhs expr sym expr_text
 #' @export
@@ -101,6 +126,7 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
                   class = "snif"
     )
 
+    # add the term that, when included in the current model, has the best score
     for (nv in 1:maxnv) {
         scores <- list(lin = c(purrr::map_dbl(can$lin, score.candidate), Inf),
                        nl  = c(purrr::map_dbl(can$nl, score.candidate), Inf),
@@ -108,17 +134,22 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
         )
 
         mins <- purrr::map_dbl(scores, min)
+
+        # i is 1, 2, or 3 which correpsonds to lin, nl, and int
         i  <- which.min(mins)
+
+        # j is the best scoring candidate
         j  <- which.min(scores[[i]])
         s  <- min(mins)
 
+        # if the best score in Inf, we've exhausted all possible additions
         if (is.infinite(s))
             break
 
         prev.sel <- c(sel$lin, sel$nl)
         term <- can[[i]][[j]]
 
-        sel[[i]]  <- c(term, sel[[i]])
+        sel[[i]] <- c(term, sel[[i]])
         can[[i]] <- can[[i]][-j]
 
         if (i < 3)
