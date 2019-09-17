@@ -58,155 +58,178 @@
 snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
                    maxnv = ncol(df), main.only = NULL, linear.only = NULL)
 {
-  if (!rlang::is_formula(formula))
-    stop("'formula' must be a formula.")
+    # snif.init performs all the input checking and generates the initial
+    # parameters for the forward selction stage.
+    initial <- snif.init(formula, df, type, score, degree, maxnv, main.only,
+                             linear.only)
 
-  if (!is.data.frame(df))
-    stop("'df' must be a data.frame.")
+    # score model is BIC, AIC, or PV
+    score.model <- initial$score.model
+    # model is glm or lm depending on type
+    model       <- initial$model
 
-  score <- match.arg(score, c("BIC", "AIC", "PV"))
+    # 'sel' is the selected linear (lin), nonlinear (nl) and interaction (int)
+    # terms as specified by 'formula'. 'can' is the candidate sets for lin, nl,
+    # and int. 'can' takes into account 'main.only', 'linear only', and 'sel'
+    sel <- initial$sel
+    can <- initial$can
 
-  type <- match.arg(type, c("linear", "logistic"))
-
-  if (!is.numeric(degree) || degree < 2)
-    stop("'degree' must be an integer >= 2.")
-
-  if (!is.numeric(maxnv) || maxnv < 1)
-    stop("'maxnv' must be an integer > 0.")
-
-  if (!is.null(main.only) && !is.character(main.only))
-    stop("'main.only' must be a character vector.")
-
-  if (!is.null(linear.only) && !is.character(linear.only))
-    stop("'linear.only' must be a character vector.")
-
-  if (!is.null(setdiff(main.only, names(df))))
-    stop("main.only contains variables that are not in df")
-
-  if (!is.null(setdiff(linear.only, names(df))))
-    stop("main.only contains variables that are not in df")
-
-  y <- deparse(f_lhs(formula))
-  if (type == "logistic" && length(unique(df[[y]])) != 2)
-    stop(paste(y, "is not a binary variable."))
-
-  if (type == "logistic")
-    model <- function(f, df) stats::glm(f, df, family = stats::binomial)
-  else
-    model <- stats::lm
-
-  score.model <- switch(score,
-    "BIC" = function(x) stats::BIC(x),
-    "AIC" = function(x) stats::AIC(x),
-    "PV"  = function(x)
+    add.inter <- function(int.can, selected, term)
     {
-      s <-summary(x)
-      if (is.null(s$fstatistic))
-        s$coefficients[1,4]
-      else
-        eval(expr(stats::pf(!!!unname(s$fstatistic), lower.tail = F)))
-    }
-  )
+        int <- make_interaction(selected, term)
 
-  if (type == "logistic" && score == "PV")
-    stop("PV scoring is incompatible with logisitic regression.")
-
-  score.candidate <- function(candidate)
-  {
-    f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!candidate)
-    score.model(model(f, df))
-  }
-
-  parsed   <- parse_formula(formula, degree)
-
-  lin.sel <- parsed$lin
-  nl.sel  <- parsed$nl
-  int.sel <- parsed$int
-
-  vars     <- setdiff(names(df), y)
-  lin.cand <- setdiff(purrr::map(vars, ~ sym(.x)), lin.sel)
-
-  vars    <- setdiff(vars, linear.only)
-  nl.cand <- setdiff(purrr::map(vars, function(var)
-    expr(bs(!!sym(var), degree = !!degree)[, -1])), nl.sel)
-
-  add.inter <- function(int.cand, sel, term)
-  {
-    int <- make_interaction(sel, term)
-
-    if (all.vars(sel) == all.vars(term))
-      int.cand
-    else if (all.vars(sel) %in% main.only || all.vars(term) %in% main.only)
-      int.cand
-    else if (expr_text(int) %in% purrr::map_chr(int.sel, expr_text))
-      int.cand
-    else
-      c(int.cand, int)
-  }
-
-  int.cand <- purrr::map(c(lin.sel, nl.sel), function(term)
-    purrr::reduce(c(lin.sel, nl.sel), add.inter, term = term, .init = NULL)
-  )
-  int.cand <- unique(rlang::squash(int.cand))
-
-  f <- formula
-  output <- structure(list(formula = f, score = score.model(model(f, df)),
-                        nv = 0, df = df, model = model),
-                      class = "snif")
-
-  for (nv in 1:maxnv) {
-    lin.scores <- c(purrr::map_dbl(lin.cand, score.candidate), Inf)
-    nl.scores  <- c(purrr::map_dbl(nl.cand, score.candidate), Inf)
-    int.scores <- c(purrr::map_dbl(int.cand, score.candidate), Inf)
-
-    s <- min(c(min(lin.scores), min(nl.scores), min(int.scores)))
-    if (s == Inf) {
-      message("No more candidate additions, returning.")
-      break
+        if (all.vars(selected) == all.vars(term))
+            int.can
+        else if (any(c(all.vars(selected), all.vars(term)) %in% main.only))
+            int.can
+        else if (expr_text(int) %in% purrr::map_chr(sel$int, expr_text))
+            int.can
+        else
+            c(int.can, int)
     }
 
-    i <- which.min(c(min(lin.scores), min(nl.scores), min(int.scores)))
-    sel <- c(lin.sel, nl.sel)
-    if (i == 1) {
-      i <- which.min(lin.scores)
-      term <- lin.cand[[i]]
-
-      lin.sel  <- c(term, lin.sel)
-      lin.cand <- lin.cand[-i]
-
-      int.cand <- purrr::reduce(sel, add.inter, term = term, .init = int.cand)
-    }
-    else if (i == 2) {
-      i <- which.min(nl.scores)
-      term <- nl.cand[[i]]
-
-      nl.sel  <- c(term, nl.sel)
-      nl.cand <- nl.cand[-i]
-
-      int.cand <- purrr::reduce(sel, add.inter, term = term, .init = int.cand)
-    }
-    else {
-      i <- which.min(int.scores)
-      term <- int.cand[[i]]
-
-      int.sel  <- c(term, int.sel)
-      int.cand <- int.cand[-i]
+    f <- formula
+    score.candidate <- function(candidate)
+    {
+        f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!candidate)
+        score.model(model(f, df))
     }
 
-    if (is.null(f_rhs(f)))
-      f <- expr(!!f_lhs(f) ~ !!term)
-    else
-      f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!term)
+    output <- structure(
+                  list(formula = f, score = score.model(model(f, df)), nv = 0,
+                      df = df, model = model),
+                  class = "snif"
+    )
 
-    output$score   <- c(output$score, s)
-    output$nv      <- c(output$nv, nv)
-    output$formula <- c(output$formula, f)
-  }
+    for (nv in 1:maxnv) {
+        scores <- list(lin = c(purrr::map_dbl(can$lin, score.candidate), Inf),
+                       nl  = c(purrr::map_dbl(can$nl, score.candidate), Inf),
+                       int = c(purrr::map_dbl(can$int, score.candidate), Inf)
+        )
 
-  return(output)
+        mins <- purrr::map_dbl(scores, min)
+        i  <- which.min(mins)
+        j  <- which.min(scores[[i]])
+        s  <- min(mins)
+
+        if (is.infinite(s))
+            break
+
+        prev.sel <- c(sel$lin, sel$nl)
+        term <- can[[i]][[j]]
+
+        sel[[i]]  <- c(term, sel[[i]])
+        can[[i]] <- can[[i]][-j]
+
+        if (i < 3)
+            can$int <- purrr::reduce(prev.sel, add.inter, term = term,
+                                         .init = can$int)
+
+        if (is.null(f_rhs(f)))
+            f <- expr(!!f_lhs(f) ~ !!term)
+        else
+            f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!term)
+
+        output$score   <- c(output$score, s)
+        output$nv      <- c(output$nv, nv)
+        output$formula <- c(output$formula, f)
+    }
+
+    return(output)
 }
 
-#'Summarizing SNIF Fits
+snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
+{
+    if (!rlang::is_formula(f))
+        stop("'formula' must be a formula.")
+
+    if (!is.data.frame(df))
+        stop("'df' must be a data.frame.")
+
+    score <- match.arg(score, c("BIC", "AIC", "PV"))
+    type  <- match.arg(type, c("linear", "logistic"))
+
+    if (!is.numeric(degree) || degree < 2)
+        stop("'degree' must be an integer >= 2.")
+
+    if (!is.numeric(maxnv) || maxnv < 1)
+        stop("'maxnv' must be an integer > 0.")
+
+    if (!is.null(main.only) && !is.character(main.only))
+        stop("'main.only' must be a character vector.")
+
+    if (!is.null(linear.only) && !is.character(linear.only))
+        stop("'linear.only' must be a character vector.")
+
+    if (length(setdiff(main.only, names(df))) > 0)
+        stop("'main.only' contains variables that are not in 'df'.")
+
+    if (length(setdiff(linear.only, names(df))) > 0)
+        stop("'main.only' contains variables that are not in 'df'.")
+
+    y <- deparse(f_lhs(f))
+
+    if (type == "logistic" && length(unique(df[[y]])) != 2)
+        stop(paste(y, "is not a binary variable."))
+
+    if (type == "logistic")
+        model <- function(f, df) stats::glm(f, df, family = stats::binomial)
+    else
+        model <- stats::lm
+
+    score.model <- switch(score,
+        "BIC" = function(x) stats::BIC(x),
+        "AIC" = function(x) stats::AIC(x),
+        "PV"  = function(x)
+        {
+            s <-summary(x)
+            if (is.null(s$fstatistic))
+                s$coefficients[1, 4]
+            else
+                eval(expr(stats::pf(!!!unname(s$fstatistic), lower.tail = F)))
+        }
+    )
+
+    if (type == "logistic" && score == "PV")
+        stop("PV scoring is incompatible with logisitic regression.")
+
+
+    parsed <- parse_formula(f, degree)
+    sel    <- list(lin = parsed$lin, nl = parsed$nl, int = parsed$int)
+
+    can <- NULL
+
+    vars    <- setdiff(names(df), y)
+    can$lin <- setdiff(purrr::map(vars, ~ sym(.x)), sel$lin)
+
+    vars   <- setdiff(vars, linear.only)
+    can$nl <- setdiff(purrr::map(vars, function(var)
+        expr(bs(!!sym(var), degree = !!degree)[, -1])), sel$nl)
+
+    add.inter <- function(int.can, selected, term)
+    {
+        int <- make_interaction(selected, term)
+
+        if (all.vars(selected) == all.vars(term))
+            int.can
+        else if (any(c(all.vars(selected), all.vars(term)) %in% main.only))
+            int.can
+        else if (any(int == sel$int))
+            int.can
+        else
+            c(int.can, int)
+    }
+
+    can$int <- purrr::map(c(sel$lin, sel$nl), function(term)
+        purrr::reduce(c(sel$lin, sel$nl), add.inter, term = term,
+                          .init = list()))
+
+    can$int <- unique(rlang::squash(can$int))
+
+    list(model = model, score.model = score.model, sel = sel, can = can)
+}
+
+#' Summarizing SNIF Fits
 #'
 #' \code{summary} method for class "snif"
 #'
@@ -219,12 +242,16 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
 summary.snif <- function(object, ...)
 {
     if (class(object) != "snif")
-      stop("'object' is not a 'snif' object.")
+        stop("'object' is not a 'snif' object.")
 
-   i <- which.min(object$score)
-   formula <- object$formula[[i]]
-   df <- object$df
-   eval(expr(summary(object$model(!!formula, df), ...)))
+    i <- which.min(object$score)
+    formula <- object$formula[[i]]
+
+    list(
+        formula = object$formula[[i]],
+        score = object$score[i],
+        summary = summary(object$model(formula, object$df), ...)
+    )
 }
 
 #' Predict Using The Best SNIF Fit
@@ -242,10 +269,32 @@ summary.snif <- function(object, ...)
 predict.snif <- function(object, newdata, ...)
 {
     if (class(object) != "snif")
-      stop("'object' is not a 'snif' object.")
+        stop("'object' is not a 'snif' object.")
 
-   i <- which.min(object$score)
-   formula <- object$formula[[i]]
-   df <- object$df
-   eval(expr(stats::predict(object$model(!!formula, df), newdata, ...)))
+    i <- which.min(object$score)
+    formula <- object$formula[[i]]
+    df <- object$df
+    stats::predict(object$model(formula, df), newdata, ...)
+}
+
+#' Print \code{snif} objects
+#'
+#' \code{print} method for class "snip"
+#' @param x An object of type "snif"
+#' @param ... Additional parameters to pass onto \code{print}
+#' @export
+print.snif <- function(x, ...)
+{
+    if (class(x) != "snif")
+        stop("'x' is not a snif object.")
+
+    if (isTRUE(invisible(all.equal(x$model, stats::lm))))
+        cat("snif run with type = 'linear'.\n")
+    else
+        cat("snif run with type = 'logisitic'.\n")
+
+    for (i in 1:length(x$formula))
+        cat(sprintf("Score: %f, model: %s\n", x$score[i],
+            expr_text(x$formula[[i]]))
+        )
 }

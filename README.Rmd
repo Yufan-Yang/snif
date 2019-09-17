@@ -1,20 +1,16 @@
 ---
 output: md_document
 ---
-
+# snif
 <!-- badges: start -->
 [![Travis build status](https://travis-ci.org/umich-cphds/snif.svg?branch=master)](https://travis-ci.org/umich-cphds/snif)
 <!-- badges: end -->
 
-# Introduction
 `snif` is a R package that implements "Selection of Nonlinear Interactions by a
-Forward Stepwise Algorithm". `snif` (the function) is a a forward stepwise
-algorithm that takes nonlinearity and interactions into account.
+Forward Stepwise Algorithm". `snif` is currently in the middle of being tested
+and polished, and as such it is *BETA* software.
 
-`snif` is currently in the middle of being tested and polished, and as such it
-is *BETA* software.
-
-# Installation
+## Installation
 `snif` requires the packages `purrr` and `rlang` to be installed, and it is a
 good idea to update them to make sure the package works correctly.
 
@@ -25,7 +21,7 @@ install.packages(c("rlang", "purrr"))
 # install.packages("devtools")
 devtools::install_github("umich-cphds/snif")
 ```
-# Example
+## Example
 This section is based off the snif documentation.
 
 The first argument to `snif` is a R formula that defines the initial model `snif`
@@ -49,7 +45,7 @@ names(snif.df)
 
 In this data.frame, the response, `y`, is continuous so we will use a linear
 model by setting `type = "linear"`. We would also like to use BIC scoring to
-determine which variable to model to the model, so we set `score = "BIC"`. For
+determine which variable to add to the model, so we set `score = "BIC"`. For
 the initial formula to fit, we do not know much about this data so we will start
 with the null model, `y ~ NULL`.
 
@@ -78,14 +74,14 @@ Note that `bs` implies that both `V2` and the nonlinear expansion of `V2`,
 formulas are equivalent: `y ~ bs(V2)` and `y ~ V2 + bs(V2)[,-1]`
 If you wish for only the non linear part of `V2` to be included in `snif`, you
 need to drop the linear term from the expansion, that is, `y ~ bs(V2)[, -1]`.
-Finally, you may specify the degree of the expansion via the degree parameter in
-`snif`.
+Finally, you may specify the degree of the expansion via the degree parameter
+in `snif`.
 
 More detailed documentation is available on the `snif` help page, which
 provides rules for building initial `snif` formulas, and documents other optional
 parameters not mentioned here.
 
-# Reference
+## Reference
 Narisetty, Naveen N. and Mukherjee, Bhramar and Chen, Yin-Hsiu and Gonzalez,
 Richard and Meeker, John D. Selection of nonlinear interactions by a
 forward stepwise algorithm: Application to identifying environmental
@@ -93,5 +89,5 @@ chemical mixtures affecting health outcomes. Statistics in Medicine.
 2019;38(9):1582-1600. \href{https://doi.org/10.1002/sim.8059}{10.1002/sim.8059}
 
 # Contact
-Please email Alex Rix (alexrix@umich.edu) if you have any questions,
-comments, or possible bugs to report. You may also open up an issue on github.
+Please email Alex Rix (alexrix@umich.edu) if you have any questions, comments
+or bugs to report. You may also open up an issue on github.
