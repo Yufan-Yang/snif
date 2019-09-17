@@ -1,3 +1,8 @@
+<!-- badges: start -->
+[![Travis build
+status](https://travis-ci.org/umich-cphds/snif.svg?branch=master)](https://travis-ci.org/umich-cphds/snif)
+<!-- badges: end -->
+
 Introduction
 ============
 
@@ -117,7 +122,7 @@ Alternatively, we can use a non null initial model
 `snif` also supports interaction terms via `:` and basis expansions via
 `bs`.
 
-    snif.out <- snif(formula = y ~ bs(V2), df = snif.df, type = "linear",
+    snif.out <- snif(formula = y ~ bs(V2) + V2:V4, df = snif.df, type = "linear",
                        score = "BIC")
 
 Note that `bs` implies that both `V2` and the nonlinear expansion of
