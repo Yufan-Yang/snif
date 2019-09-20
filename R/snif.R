@@ -35,10 +35,9 @@
 #' @param df A data.frame containing the data
 #' @param type The type of regression to perform. Either "linear" (default) or
 #'   "logistic"
-#' @param score A character argument that specifies the kind of scoring method
+#' @param method A character argument that specifies the kind of scoring method
 #'   used to determine which variable to add to the model. supported options
-#'   are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
-#'   the 'type' is "logistic"
+#'   are "BIC" (default), "AIC", and "PV" (p.value).
 #' @param degree Degree of basis spline expansion for nonlinear effects
 #' @param maxnv Max number of variables to add. Default is \code{ncol(df)}
 #' @param main.only Character vector of variables that are only considered for
@@ -80,7 +79,7 @@
 #' @importFrom splines bs
 #' @importFrom rlang f_lhs f_rhs expr sym expr_text
 #' @export
-snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
+snif <- function(formula, df, type = "linear", method = "BIC", degree = 3,
                    maxnv = ncol(df), main.only = NULL, linear.only = NULL)
 {
     # snif.init performs all the input checking and generates the initial
@@ -116,13 +115,13 @@ snif <- function(formula, df, type = "linear", score = "BIC", degree = 3,
     f <- formula
     score.candidate <- function(candidate)
     {
-        f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!candidate)
-        score.model(model(f, df))
+        f1 <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!candidate)
+        score.model(x = model(f1, df), x0 = model(f, df))
     }
 
     output <- structure(
                   list(formula = f, score = score.model(model(f, df)), nv = 0,
-                      df = df, model = model),
+                      df = df, model = model, score = score),
                   class = "snif"
     )
 
@@ -208,23 +207,32 @@ snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
     else
         model <- stats::lm
 
-    score.model <- switch(score,
-        "BIC" = function(x) stats::BIC(x),
-        "AIC" = function(x) stats::AIC(x),
-        "PV"  = function(x)
+    if (score == "BIC")
+        score.model <- function(x,...) stats::BIC(x)
+    else if (score == "AIC")
+        score.model <- function(x, ...) stats::AIC(x)
+    else if (type == "linear") {
+        score.model <- function(x, x0)
         {
-            s <-summary(x)
-            if (is.null(s$fstatistic))
-                s$coefficients[1, 4]
+            if (missing(x0)) {
+                p <- anova(x)$`Pr(>F)`
+                ifelse(is.na(p[1]), 1, p[1])
+            }
             else
-                eval(expr(stats::pf(!!!unname(s$fstatistic), lower.tail = F)))
+            anova(x0, x)$`Pr(>F)`[2]
         }
-    )
-
-    if (type == "logistic" && score == "PV")
-        stop("PV scoring is incompatible with logisitic regression.")
-
-
+    }
+    else {
+        score.model <- function(x, x0)
+        {
+            if (missing(x0)) {
+                p <- anova(x, test = "Chisq")$`Pr(>Chi)`
+                ifelse(is.na(p[1]), 1, p[2])
+            }
+            else
+                anova(x0, x, test = "Chisq")$`Pr(>Chi)`[2]
+        }
+    }
     parsed <- parse_formula(f, degree)
     sel    <- list(lin = parsed$lin, nl = parsed$nl, int = parsed$int)
 
@@ -270,12 +278,14 @@ snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
 #' @param ... Additional arguments to \code{summary.lm} or \code{summary.glm},
 #'     depending on the type of model fit
 #' @export
-summary.snif <- function(object, ...)
+summary.snif <- function(object, alpha = 0.05, ...)
 {
     if (class(object) != "snif")
         stop("'object' is not a 'snif' object.")
 
-    i <- which.min(object$score)
+    if (score == "PV") {
+        i <- match(F, object$score < 0.05)
+    }
     formula <- object$formula[[i]]
 
     list(
@@ -325,7 +335,5 @@ print.snif <- function(x, ...)
         cat("snif run with type = 'logisitic'.\n")
 
     for (i in 1:length(x$formula))
-        cat(sprintf("Score: %f, model: %s\n", x$score[i],
-            expr_text(x$formula[[i]]))
-        )
+        cat(paste("Score:", signif(x$score[i]), "model:", expr_text(x$formula[[i]]), "\n"))
 }
