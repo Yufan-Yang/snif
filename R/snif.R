@@ -214,7 +214,7 @@ snif.init <- function(f, df, type, method, degree, maxnv, main.only, linear.only
                 if (is.null(fstat))
                     1
                 else
-                    eval(expr(pf(!!!unname(fstat), lower.tail = F)))
+                    eval(expr(stats::pf(!!!unname(fstat), lower.tail = F)))
             }
             else
                 stats::anova(x0, x)$`Pr(>F)`[2]
@@ -223,15 +223,12 @@ snif.init <- function(f, df, type, method, degree, maxnv, main.only, linear.only
     else {
         score.model <- function(x, x0)
         {
-            if (missing(x0)) {
-                pchisq(x$null.deviance - x$deviance, x$df.null - x$df.residual,
-                           lower.tail = F)
-
-            }
+            if (missing(x0))
+                stats::pchisq(x$null.deviance - x$deviance, x$df.null -
+                                  x$df.residual, lower.tail = F)
             else
-                pchisq(x0$deviance - x$deviance, x0$df.residual - x$df.residual,
-                       lower.tail = F)
-
+                stats::pchisq(x0$deviance - x$deviance, x0$df.residual -
+                                  x$df.residual, lower.tail = F)
         }
     }
     parsed <- parse_formula(f, degree)

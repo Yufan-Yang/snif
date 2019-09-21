@@ -4,13 +4,10 @@
 \alias{summary.snif}
 \title{Summarizing SNIF Fits}
 \usage{
-\method{summary}{snif}(object, alpha = 0.05, ...)
+\method{summary}{snif}(object, ...)
 }
 \arguments{
 \item{object}{An object of type "snif"}
-
-\item{alpha}{If method == "PV", \code{alpha} determines the selection criteon
-for picking the best model.}
 
 \item{...}{Additional arguments to \code{summary.lm} or \code{summary.glm},
 depending on the type of model fit}
