@@ -1,21 +1,18 @@
+snif
+====
+
 <!-- badges: start -->
 [![Travis build
 status](https://travis-ci.org/umich-cphds/snif.svg?branch=master)](https://travis-ci.org/umich-cphds/snif)
 <!-- badges: end -->
 
-Introduction
-============
-
 `snif` is a R package that implements "Selection of Nonlinear
-Interactions by a Forward Stepwise Algorithm". `snif` (the function) is
-a a forward stepwise algorithm that takes nonlinearity and interactions
-into account.
-
-`snif` is currently in the middle of being tested and polished, and as
-such it is *BETA* software.
+Interactions by a Forward Stepwise Algorithm". `snif` is currently in
+the middle of being tested and polished, and as such it is *BETA*
+software.
 
 Installation
-============
+------------
 
 `snif` requires the packages `purrr` and `rlang` to be installed, and it
 is a good idea to update them to make sure the package works correctly.
@@ -26,7 +23,7 @@ is a good idea to update them to make sure the package works correctly.
     devtools::install_github("umich-cphds/snif")
 
 Example
-=======
+-------
 
 This section is based off the snif documentation.
 
@@ -54,18 +51,24 @@ It has 500 rows and 11 columns.
 
 In this data.frame, the response, `y`, is continuous so we will use a
 linear model by setting `type = "linear"`. We would also like to use BIC
-scoring to determine which variable to model to the model, so we set
-`score = "BIC"`. For the initial formula to fit, we do not know much
+scoring to determine which variable to add to the model, so we set
+`method = "BIC"`. For the initial formula to fit, we do not know much
 about this data so we will start with the null model, `y ~ NULL`.
 
-    snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear", score = "BIC")
+    snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear", method = "BIC")
 
     summary(snif.out)
 
+    ## $formula
+    ## y ~ bs(V2, degree = 3)[, -1] + V5 + V6 + V4 + V2
+    ## 
+    ## $score
+    ## [1] 2619.361
+    ## 
+    ## $summary
     ## 
     ## Call:
-    ## stats::lm(formula = y ~ bs(V2, degree = 3)[, -1] + V5 + V6 + 
-    ##     V4 + V2, data = df)
+    ## object$model(formula = formula, data = object$df)
     ## 
     ## Residuals:
     ##      Min       1Q   Median       3Q      Max 
@@ -90,14 +93,20 @@ about this data so we will start with the null model, `y ~ NULL`.
 Alternatively, we can use a non null initial model
 
     snif.out <- snif(formula = y ~ V2, df = snif.df, type = "linear",
-                       score = "BIC")
+                       method = "BIC")
 
     summary(snif.out)
 
+    ## $formula
+    ## y ~ V2 + bs(V2, degree = 3)[, -1] + V5 + V6 + V4
+    ## 
+    ## $score
+    ## [1] 2619.361
+    ## 
+    ## $summary
     ## 
     ## Call:
-    ## stats::lm(formula = y ~ V2 + bs(V2, degree = 3)[, -1] + V5 + 
-    ##     V6 + V4, data = df)
+    ## object$model(formula = formula, data = object$df)
     ## 
     ## Residuals:
     ##      Min       1Q   Median       3Q      Max 
@@ -123,7 +132,7 @@ Alternatively, we can use a non null initial model
 `bs`.
 
     snif.out <- snif(formula = y ~ bs(V2) + V2:V4, df = snif.df, type = "linear",
-                       score = "BIC")
+                       method = "BIC")
 
 Note that `bs` implies that both `V2` and the nonlinear expansion of
 `V2`, `bs(V2)[,-1]` are both included in the model. That is the
@@ -138,7 +147,7 @@ provides rules for building initial `snif` formulas, and documents other
 optional parameters not mentioned here.
 
 Reference
-=========
+---------
 
 Narisetty, Naveen N. and Mukherjee, Bhramar and Chen, Yin-Hsiu and
 Gonzalez, Richard and Meeker, John D. Selection of nonlinear
@@ -150,5 +159,4 @@ Contact
 =======
 
 Please email Alex Rix (<alexrix@umich.edu>) if you have any questions,
-comments, or possible bugs to report. You may also open up an issue on
-github.
+comments or bugs to report. You may also open up an issue on github.

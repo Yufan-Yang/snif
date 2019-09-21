@@ -58,7 +58,7 @@
 #' # if you not want to include any covariates in the initial model, you can
 #' # just use NULL of the right hand side of formula
 #' snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear",
-#'                      score = "BIC")
+#'                      method = "BIC")
 #'
 #' # snif provides a summary method which will extract and summarise the best
 #' # scoring subset
@@ -67,14 +67,14 @@
 #' # you can specify an initial model by using the rules explained in the
 #' # details section.
 #' snif.out <- snif(formula = y ~ V2 + V2:V4, df = snif.df, type = "linear",
-#'                      score = "BIC")
+#'                      method = "BIC")
 #'
 #' # snif also supports binary outcomes. First, we copy snif.df and discretize y
 #' snif.df.bin <- snif.df
 #' snif.df.bin$y <- ifelse(snif.df.bin$y > 5, 1, 0)
 
 #' snif.out <- snif(formula = y ~ NULL, df = snif.df.bin, type = "logistic",
-#'                      score = "BIC")
+#'                      method = "BIC")
 #' summary(snif.out)
 #' @importFrom splines bs
 #' @importFrom rlang f_lhs f_rhs expr sym expr_text
@@ -84,7 +84,7 @@ snif <- function(formula, df, type = "linear", method = "BIC", degree = 3,
 {
     # snif.init performs all the input checking and generates the initial
     # parameters for the forward selction stage.
-    initial <- snif.init(formula, df, type, score, degree, maxnv, main.only,
+    initial <- snif.init(formula, df, type, method, degree, maxnv, main.only,
                              linear.only)
 
     # score model is BIC, AIC, or PV
@@ -121,7 +121,7 @@ snif <- function(formula, df, type = "linear", method = "BIC", degree = 3,
 
     output <- structure(
                   list(formula = f, score = score.model(model(f, df)), nv = 0,
-                      df = df, model = model, score = score),
+                      df = df, model = model, method = method),
                   class = "snif"
     )
 
@@ -139,11 +139,6 @@ snif <- function(formula, df, type = "linear", method = "BIC", degree = 3,
 
         # j is the best scoring candidate
         j  <- which.min(scores[[i]])
-        s  <- min(mins)
-
-        # if the best score in Inf, we've exhausted all possible additions
-        if (is.infinite(s))
-            break
 
         prev.sel <- c(sel$lin, sel$nl)
         term <- can[[i]][[j]]
@@ -160,7 +155,7 @@ snif <- function(formula, df, type = "linear", method = "BIC", degree = 3,
         else
             f <- expr(!!f_lhs(f) ~ !!f_rhs(f) + !!term)
 
-        output$score   <- c(output$score, s)
+        output$score   <- c(output$score, score.model(model(f, df)))
         output$nv      <- c(output$nv, nv)
         output$formula <- c(output$formula, f)
     }
@@ -168,7 +163,7 @@ snif <- function(formula, df, type = "linear", method = "BIC", degree = 3,
     return(output)
 }
 
-snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
+snif.init <- function(f, df, type, method, degree, maxnv, main.only, linear.only)
 {
     if (!rlang::is_formula(f))
         stop("'formula' must be a formula.")
@@ -176,7 +171,7 @@ snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
     if (!is.data.frame(df))
         stop("'df' must be a data.frame.")
 
-    score <- match.arg(score, c("BIC", "AIC", "PV"))
+    method <- match.arg(method, c("BIC", "AIC", "PV"))
     type  <- match.arg(type, c("linear", "logistic"))
 
     if (!is.numeric(degree) || degree < 2)
@@ -207,30 +202,36 @@ snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
     else
         model <- stats::lm
 
-    if (score == "BIC")
-        score.model <- function(x,...) stats::BIC(x)
-    else if (score == "AIC")
-        score.model <- function(x, ...) stats::AIC(x)
+    if (method == "BIC")
+        score.model <- function(x, x0) stats::BIC(x)
+    else if (method == "AIC")
+        score.model <- function(x, x0) stats::AIC(x)
     else if (type == "linear") {
         score.model <- function(x, x0)
         {
             if (missing(x0)) {
-                p <- anova(x)$`Pr(>F)`
-                ifelse(is.na(p[1]), 1, p[1])
+                fstat <- summary(x)$fstatistic
+                if (is.null(fstat))
+                    1
+                else
+                    eval(expr(pf(!!!unname(fstat), lower.tail = F)))
             }
             else
-            anova(x0, x)$`Pr(>F)`[2]
+                stats::anova(x0, x)$`Pr(>F)`[2]
         }
     }
     else {
         score.model <- function(x, x0)
         {
             if (missing(x0)) {
-                p <- anova(x, test = "Chisq")$`Pr(>Chi)`
-                ifelse(is.na(p[1]), 1, p[2])
+                pchisq(x$null.deviance - x$deviance, x$df.null - x$df.residual,
+                           lower.tail = F)
+
             }
             else
-                anova(x0, x, test = "Chisq")$`Pr(>Chi)`[2]
+                pchisq(x0$deviance - x$deviance, x0$df.residual - x$df.residual,
+                       lower.tail = F)
+
         }
     }
     parsed <- parse_formula(f, degree)
@@ -278,14 +279,12 @@ snif.init <- function(f, df, type, score, degree, maxnv, main.only, linear.only)
 #' @param ... Additional arguments to \code{summary.lm} or \code{summary.glm},
 #'     depending on the type of model fit
 #' @export
-summary.snif <- function(object, alpha = 0.05, ...)
+summary.snif <- function(object, ...)
 {
     if (class(object) != "snif")
         stop("'object' is not a 'snif' object.")
 
-    if (score == "PV") {
-        i <- match(F, object$score < 0.05)
-    }
+    i <- which.min(object$score)
     formula <- object$formula[[i]]
 
     list(

@@ -45,12 +45,12 @@ names(snif.df)
 
 In this data.frame, the response, `y`, is continuous so we will use a linear
 model by setting `type = "linear"`. We would also like to use BIC scoring to
-determine which variable to add to the model, so we set `score = "BIC"`. For
+determine which variable to add to the model, so we set `method = "BIC"`. For
 the initial formula to fit, we do not know much about this data so we will start
 with the null model, `y ~ NULL`.
 
 ```{r}
-snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear", score = "BIC")
+snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear", method = "BIC")
 
 summary(snif.out)
 ```
@@ -58,7 +58,7 @@ summary(snif.out)
 Alternatively, we can use a non null initial model
 ```{r}
 snif.out <- snif(formula = y ~ V2, df = snif.df, type = "linear",
-                   score = "BIC")
+                   method = "BIC")
 
 summary(snif.out)
 ```
@@ -67,7 +67,7 @@ summary(snif.out)
 
 ```{r}
 snif.out <- snif(formula = y ~ bs(V2) + V2:V4, df = snif.df, type = "linear",
-                   score = "BIC")
+                   method = "BIC")
 ```
 Note that `bs` implies that both `V2` and the nonlinear expansion of `V2`,
 `bs(V2)[,-1]` are both included in the model. That is the following two

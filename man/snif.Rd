@@ -4,7 +4,7 @@
 \alias{snif}
 \title{Selection of nonlinear interactions by a forward stepwise algorithm}
 \usage{
-snif(formula, df, type = "linear", score = "BIC", degree = 3,
+snif(formula, df, type = "linear", method = "BIC", degree = 3,
   maxnv = ncol(df), main.only = NULL, linear.only = NULL)
 }
 \arguments{
@@ -19,10 +19,9 @@ with \code{formula}}
 \item{type}{The type of regression to perform. Either "linear" (default) or
 "logistic"}
 
-\item{score}{A character argument that specifies the kind of scoring method
+\item{method}{A character argument that specifies the kind of scoring method
 used to determine which variable to add to the model. supported options
-are "BIC" (default), "AIC", and "PV" (p.value). "PV" is not compatible when
-the 'type' is "logistic"}
+are "BIC" (default), "AIC", and "PV" (p.value).}
 
 \item{degree}{Degree of basis spline expansion for nonlinear effects}
 
@@ -71,7 +70,7 @@ library(snif)
 # if you not want to include any covariates in the initial model, you can
 # just use NULL of the right hand side of formula
 snif.out <- snif(formula = y ~ NULL, df = snif.df, type = "linear",
-                     score = "BIC")
+                     method = "BIC")
 
 # snif provides a summary method which will extract and summarise the best
 # scoring subset
@@ -80,13 +79,13 @@ summary(snif.out)
 # you can specify an initial model by using the rules explained in the
 # details section.
 snif.out <- snif(formula = y ~ V2 + V2:V4, df = snif.df, type = "linear",
-                     score = "BIC")
+                     method = "BIC")
 
 # snif also supports binary outcomes. First, we copy snif.df and discretize y
 snif.df.bin <- snif.df
 snif.df.bin$y <- ifelse(snif.df.bin$y > 5, 1, 0)
 snif.out <- snif(formula = y ~ NULL, df = snif.df.bin, type = "logistic",
-                     score = "BIC")
+                     method = "BIC")
 summary(snif.out)
 }
 \references{
