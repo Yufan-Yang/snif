@@ -47,3 +47,26 @@ test_that("snif.init throws errors correctly", {
         names(snif.df))
     expect_equal(init$can$nl, list())
 })
+
+
+
+test_that("snif p.value scoring works", {
+    init <- snif.init(y ~ NULL, snif.df, "linear", "PV", 3, 1, NULL, NULL)
+
+    model <- init$model
+    score.model <- init$score.model
+    m0 <- model(y ~ NULL, snif.df)
+    m1 <- model(y ~ V2, snif.df)
+
+    score.model(m1, m0)
+    expect_true(score.model(m1, m0) < 0.05)
+    expect_true(score.model(m1) < score.model(m0))
+
+    m0 <- model(y ~ V2, snif.df)
+    m1 <- model(y ~ V2 + bs(V2)[, -1], snif.df)
+
+    score.model(m1, m0)
+    expect_true(score.model(m1, m0) < 0.05)
+    expect_true(score.model(m1) < score.model(m0))
+
+})
