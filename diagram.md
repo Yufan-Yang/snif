@@ -24,7 +24,8 @@ For (i in 1:maxnv){
 1. choose one effect s from set C such that max(-BIC(s U L U N U N)) ### U means Union
 2. remove s from set C
 3. add s to relevant set ### For example, if s is linear main effectes, then add s to set L
-4. if s is a main effect, add interaction terms between s and exsiting main effects of set L and set N to set C
+4. if s is a main effect, add interaction terms between s and exsiting main effects of set L 
+and set N to set C
 5. store BIC score and s U L U N U N in matrix Path
 
 }
