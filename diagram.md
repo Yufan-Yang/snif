@@ -10,12 +10,12 @@ Original covariates are expanded to suit the mean function below.
 #### Psudo Code
 ```r
 ###Initialize
-maxnv=ncol(df)
+maxnv=ncol(df) ### Max number of effects to be included
 L=c() ### Index set for linear main effects selected
-N=c() ###Index set for nonlinear main effects selected
-I=c() ###Index set for interation terms selected
-P=1:p ###Index set for all linear main effects
-NP=1:np ###Index set for all nonlinear main effects
+N=c() ### Index set for nonlinear main effects selected
+I=c() ### Index set for interation terms selected
+P=1:p ### Index set for all linear main effects
+NP=1:np ### Index set for all nonlinear main effects
 C=P U NP ### Union set of linear and nonlinear main effects
 Path=matrix(nrow=maxnv,ncol=2)
 colnames(Path)=c("BIC","effects")
