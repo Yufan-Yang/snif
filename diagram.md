@@ -7,7 +7,7 @@ Original covariates are expanded to suit the mean function below.
 
 ![img](https://latex.codecogs.com/svg.latex?%5Cinline%20%5Cfn_cm%20%5Csmall%20E%28y%7Cx_1%2C%5Cdots%2Cx_p%29%3D%5Calpha&plus;%5CSigma_%7Bj%3D1%7D%5E%7Bp%7DX_j%5Cbeta_j&plus;%5CSigma_%7Bk%3D2%7D%5E%7Bp%7D%5CSigma_%7Bl%3D1%7D%5E%7Bk-1%7DX_%7Bkl%7D%5Cgamma_%7Bkl%7D%20%5C%20%5C%20%5C%20%5C%20%5C%20%5C%20%5C%20%5C%20%5C)![img](https://latex.codecogs.com/svg.latex?%5Cinline%20%5Cfn_cm%20%5Csmall%20X_j%3Anx%20M%5C%20%2C%5Cbeta_j%3AMx1%5C%20%2C%5C%20X_%7Bkl%7D%3AnxM%5E2%5C%20%2C%5Cgamma_%7Bkl%7D%3AM%5E2x1)
 
-#### Psudo Code
+#### Pseudo code
 ```r
 ###Initialize
 maxnv=ncol(df) ### Max number of effects to be included
